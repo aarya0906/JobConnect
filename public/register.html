@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create your account — JobConnect</title>
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="auth">
+    <aside class="auth-brand">
+      <div id="brand-rings"></div>
+      <h2 id="brand-title">Your next role is one resume away.</h2>
+      <p id="brand-copy">Create a profile, upload your resume once and apply to as many roles as you like.</p>
+    </aside>
+    <section class="auth-form">
+      <div class="auth-card">
+        <h1>Create your account</h1>
+        <p class="sub">It's free, and takes under a minute.</p>
+        <div class="segmented" role="group" aria-label="Account type">
+          <button type="button" data-role="seeker" aria-pressed="true">I'm looking for work</button>
+          <button type="button" data-role="employer" aria-pressed="false">I'm hiring</button>
+        </div>
+        <form id="register-form" novalidate>
+          <div class="field"><label for="name">Full name</label><input class="input" id="name" name="name" autocomplete="name" required></div>
+          <div class="field" id="company-field" hidden><label for="companyName">Company name</label><input class="input" id="companyName" name="companyName" autocomplete="organization"></div>
+          <div class="field"><label for="email">Email</label><input class="input" id="email" name="email" type="email" autocomplete="email" required placeholder="you@example.com"></div>
+          <div class="field"><label for="password">Password</label>
+            <div class="pw-wrap"><input class="input" id="password" name="password" type="password" autocomplete="new-password" required aria-describedby="pw-hint"><button class="pw-toggle" type="button" aria-label="Show password">Show</button></div>
+            <span class="hint" id="pw-hint">At least 8 characters, with a letter and a number.</span></div>
+          <button class="btn btn-primary btn-block btn-lg" type="submit">Create account</button>
+        </form>
+        <p class="alt">Already have an account? <a href="/login" id="to-login">Log in</a></p>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/js/auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in — JobConnect</title>
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <main class="auth">
+    <aside class="auth-brand">
+      <div id="brand-rings"></div>
+      <h2>Welcome back to the connection.</h2>
+      <p>Pick up where you left off: review applicants, or check where your applications stand.</p>
+    </aside>
+    <section class="auth-form">
+      <div class="auth-card">
+        <h1>Log in</h1>
+        <p class="sub">Use the email and password you registered with.</p>
+        <form id="login-form" novalidate>
+          <div class="field"><label for="email">Email</label><input class="input" id="email" name="email" type="email" autocomplete="email" required placeholder="you@example.com"></div>
+          <div class="field"><label for="password">Password</label>
+            <div class="pw-wrap"><input class="input" id="password" name="password" type="password" autocomplete="current-password" required><button class="pw-toggle" type="button" aria-label="Show password">Show</button></div></div>
+          <button class="btn btn-primary btn-block btn-lg" type="submit">Log in</button>
+        </form>
+        <p class="alt">New to JobConnect? <a href="/register" id="to-register">Create an account</a></p>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="/js/auth.js"></script>
+</body>
+</html>

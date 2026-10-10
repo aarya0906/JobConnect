@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Browse jobs — JobConnect</title>
+  <meta name="description" content="Search open roles by keyword, location, field, employment type and work mode on JobConnect.">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <main>
+    <div class="container page-top">
+      <h1 style="font-size:clamp(2rem,4.5vw,3.2rem)">Browse jobs</h1>
+      <p>Filter by field, type and work mode. Select any role to read the details and apply.</p>
+    </div>
+    <div class="container jobs-layout">
+      <aside class="card filters" id="filters" aria-label="Filters">
+        <form id="filter-form" role="search">
+          <div class="filters-head"><h2>Filters</h2><button type="button" class="btn btn-sm" id="filters-reset">Reset</button></div>
+          <div class="field"><label for="f-q">Keyword</label><input class="input" id="f-q" name="q" type="search" placeholder="Title, company or skill"></div>
+          <div class="field"><label for="f-location">Location</label><input class="input" id="f-location" name="location" type="search" placeholder="City or “remote”"></div>
+          <div class="field"><label for="f-category">Field</label><select class="input" id="f-category" name="category"><option value="">All fields</option></select></div>
+          <div class="field"><label for="f-type">Employment type</label><select class="input" id="f-type" name="type"><option value="">Any type</option></select></div>
+          <div class="field"><label for="f-mode">Work mode</label><select class="input" id="f-mode" name="mode"><option value="">Any mode</option></select></div>
+        </form>
+      </aside>
+      <section aria-live="polite">
+        <div class="results-head">
+          <p class="muted" id="count">Loading jobs…</p>
+          <button class="btn btn-sm filter-toggle" id="filter-toggle" type="button"></button>
+        </div>
+        <div class="job-list" id="results"></div>
+        <nav class="pager" id="pager" aria-label="Pagination" hidden></nav>
+      </section>
+    </div>
+  </main>
+  <footer id="site-footer"></footer>
+  <script type="module" src="/js/jobs.js"></script>
+</body>
+</html>

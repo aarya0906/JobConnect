@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JobConnect — Where good work and good people meet</title>
+  <meta name="description" content="JobConnect is an online job portal. Upload your resume once, apply in a click, and track every application. Employers post roles and manage candidates in one place.">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <main>
+    <section class="hero">
+      <div class="container grid">
+        <div class="hero-text">
+          <h1>Where good work and good people meet.</h1>
+          <p class="lead">Upload one resume, apply in a click, and see exactly where every application stands. Employers post roles and move candidates forward from a single dashboard.</p>
+          <form class="hero-search" action="/jobs" method="get" role="search">
+            <label class="sr-only" for="hq">Job title or keyword</label>
+            <input id="hq" name="q" type="search" placeholder="Job title or keyword" autocomplete="off">
+            <label class="sr-only" for="hl">Location</label>
+            <input id="hl" name="location" type="search" placeholder="City or “remote”" autocomplete="off">
+            <button class="btn btn-primary" type="submit">Search jobs</button>
+          </form>
+          <p class="hero-hint">Popular right now: <a href="/jobs?category=Design">Design</a>, <a href="/jobs?category=Engineering">Engineering</a>, <a href="/jobs?mode=Remote">Remote roles</a></p>
+        </div>
+        <div class="hero-art" aria-label="Latest openings">
+          <div id="hero-rings"></div>
+          <div class="hero-stack" id="hero-stack"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="container livebar" id="livebar" aria-live="polite"></div>
+
+    <section class="section" id="how">
+      <div class="container">
+        <div class="section-head"><div><h2>Two sides, one connection</h2><p>Whether you're looking for your next role or your next hire, the process is short and transparent.</p></div></div>
+        <div class="split">
+          <article class="card path">
+            <h3>For candidates</h3>
+            <p>Your profile and resume stay in one place, ready for every application.</p>
+            <ol class="steps">
+              <li><div><strong>Create your profile</strong><span>Add your headline and skills, then upload your resume (PDF, DOC or DOCX).</span></div></li>
+              <li><div><strong>Apply in a click</strong><span>Send your resume with a short note. No re-typing, no repeated forms.</span></div></li>
+              <li><div><strong>Track every application</strong><span>See when you're in review, shortlisted or invited to interview.</span></div></li>
+            </ol>
+            <a class="btn btn-primary" href="/register">Create a candidate account</a>
+          </article>
+          <article class="card path">
+            <h3>For employers</h3>
+            <p>Post a role and manage everyone who applies without a spreadsheet.</p>
+            <ol class="steps">
+              <li><div><strong>Set up your company</strong><span>Tell candidates who you are, what you do and where you work.</span></div></li>
+              <li><div><strong>Post a role</strong><span>Describe the job, set the pay range and choose on-site, hybrid or remote.</span></div></li>
+              <li><div><strong>Review and decide</strong><span>Open resumes, shortlist candidates and update their status as you go.</span></div></li>
+            </ol>
+            <a class="btn" href="/register?role=employer">Create an employer account</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head"><div><h2>Browse by field</h2><p>Open roles across twelve fields, from engineering and design to healthcare and education.</p></div><a class="btn" href="/jobs">All jobs</a></div>
+        <div class="categories" id="categories"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head"><div><h2>Latest openings</h2><p>Freshly posted by employers on JobConnect.</p></div><a class="btn" href="/jobs">See all openings</a></div>
+        <div class="job-list" id="latest"></div>
+      </div>
+    </section>
+
+    <section class="section cta-band">
+      <h2>Ready to make the connection?</h2>
+      <p>Join as a candidate to apply with one resume, or as an employer to start hiring today.</p>
+      <div class="row"><a class="btn btn-primary btn-lg" href="/register">Find a job</a><a class="btn btn-lg" href="/register?role=employer">Post a job</a></div>
+    </section>
+  </main>
+  <footer id="site-footer"></footer>
+  <script type="module" src="/js/home.js"></script>
+</body>
+</html>
