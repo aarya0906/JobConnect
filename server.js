@@ -1,7 +1,7 @@
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { db } from './src/db.js';
+import { get, initSchema, pool } from './src/db.js';
 import { getSessionUser, purgeExpiredSessions, SESSION_COOKIE } from './src/auth.js';
 import { HttpError, parseCookies, sendJson, serveStatic } from './src/http.js';
 import { handleApi } from './src/routes.js';
@@ -48,7 +48,7 @@ const server = http.createServer(async (req, res) => {
         }
       }
       const token = parseCookies(req.headers.cookie)[SESSION_COOKIE];
-      const ctx = { req, res, url, token, user: getSessionUser(token), params: {} };
+      const ctx = { req, res, url, token, user: await getSessionUser(token), params: {} };
       return await handleApi(ctx);
     }
 
@@ -67,21 +67,27 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-if (process.env.SEED_DEMO !== '0') {
-  const { n } = db.prepare('SELECT COUNT(*) AS n FROM users').get();
-  if (n === 0) {
-    await seedDemoData();
-    console.log('Seeded demo data. Set SEED_DEMO=0 to skip this on a fresh database.');
+// Start listening straight away so the host's health check passes, then prepare the database.
+server.listen(PORT, HOST, () => console.log(`JobConnect is running → http://localhost:${PORT}`));
+
+try {
+  await initSchema();
+  console.log('Database ready.');
+  if (process.env.SEED_DEMO === '1') {
+    const { n } = await get('SELECT COUNT(*) AS n FROM users');
+    if (n === 0) {
+      await seedDemoData();
+      console.log('Seeded demo data (SEED_DEMO=1).');
+    }
   }
+  await purgeExpiredSessions();
+  setInterval(() => purgeExpiredSessions().catch(() => {}), 6 * 3600 * 1000).unref();
+} catch (err) {
+  console.error('\n[JobConnect] Could not set up the database:', err.message);
+  console.error('Run `npm run check-db` for help diagnosing the connection.\n');
+  process.exit(1);
 }
 
-purgeExpiredSessions();
-setInterval(purgeExpiredSessions, 6 * 3600 * 1000).unref();
-
-server.listen(PORT, HOST, () => {
-  console.log(`JobConnect is running → http://localhost:${PORT}`);
-});
-
 for (const sig of ['SIGINT', 'SIGTERM']) {
-  process.on(sig, () => server.close(() => process.exit(0)));
+  process.on(sig, () => server.close(() => pool.end().finally(() => process.exit(0))));
 }

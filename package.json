@@ -1,14 +1,18 @@
 {
   "name": "jobconnect",
-  "version": "1.0.0",
-  "description": "JobConnect — an online job portal for candidates and employers.",
+  "version": "2.0.0",
+  "description": "JobConnect — an online job portal for candidates and employers (Node.js + PostgreSQL/Neon).",
   "type": "module",
   "main": "server.js",
   "private": true,
-  "engines": { "node": ">=22.13.0" },
+  "engines": { "node": ">=22.9.0" },
   "scripts": {
-    "start": "node --disable-warning=ExperimentalWarning server.js",
-    "dev": "node --disable-warning=ExperimentalWarning --watch server.js",
-    "seed": "node --disable-warning=ExperimentalWarning src/seed.js"
+    "start": "node --env-file-if-exists=.env server.js",
+    "dev": "node --env-file-if-exists=.env --watch server.js",
+    "seed": "node --env-file-if-exists=.env src/seed.js",
+    "check-db": "node --env-file-if-exists=.env src/check-db.js"
+  },
+  "dependencies": {
+    "pg": "^8.13.1"
   }
 }

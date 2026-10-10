@@ -4,111 +4,92 @@ A complete online job portal with a black-and-silver interface.
 
 - **Candidates** create a profile, **upload a resume (PDF / DOC / DOCX)**, apply to jobs, save roles and track every application.
 - **Employers** set up a company profile, post / edit / close jobs, review applicants, download resumes and move candidates through a hiring pipeline.
-- Separate **dashboards** for each role, plus **login / register** pages and a public job board with search and filters.
+- Separate dashboards for each role, login / register pages, and a public job board with search and filters.
 
-It runs on **Node.js 22.13+ with zero npm dependencies** — the database is the SQLite module built into Node, so there is nothing to install.
+**Stack:** Node.js 22+ · PostgreSQL (built for [Neon](https://neon.tech)) · plain HTML/CSS/JS front end. One dependency: `pg`.
 
----
-
-## Quick start
-
-```bash
-cd jobconnect
-npm start          # or: node server.js
-```
-
-Open **http://localhost:3000**.
-
-On the very first start the app seeds demo companies, 14 jobs and sample applicants so you can explore straight away.
-
-| Role      | Email                        | Password    |
-|-----------|------------------------------|-------------|
-| Employer  | `employer@jobconnect.demo`   | `Demo@1234` |
-| Candidate | `seeker@jobconnect.demo`     | `Demo@1234` |
-
-> **Before going live:** start with `SEED_DEMO=0` on a fresh `DATA_DIR` (or delete the `data/` folder first) so the demo accounts and their shared password never exist in production.
-
-Check your Node version with `node -v` — it must be **22.13 or newer**.
+All data — accounts, jobs, applications **and uploaded resumes** — lives in your Neon database, so the web server itself keeps no files. That is what lets the site run on a free host whose disk is wiped on every restart (e.g. Render Free) without losing data.
 
 ---
+
+## Run it on your computer
+
+1. Install Node.js 22.9 or newer (`node -v` to check).
+2. In the project folder, create a file named `.env` (copy `.env.example`) and paste your Neon connection string:
+   ```
+   DATABASE_URL=postgresql://USER:PASSWORD@ep-xxxx-pooler.REGION.aws.neon.tech/neondb?sslmode=require
+   ```
+3. Install, check the connection, and start:
+   ```bash
+   npm install
+   npm run check-db     # confirms the connection and creates the tables
+   npm start            # → http://localhost:3000
+   ```
+
+Optional sample data (jobs, companies, applicants) for an **empty** database: run once with `SEED_DEMO=1`
+(Mac/Linux: `SEED_DEMO=1 npm start` · Windows PowerShell: `$env:SEED_DEMO=1; npm start`), or run `npm run seed`.
+
+| Demo role | Email | Password |
+|---|---|---|
+| Employer | `employer@jobconnect.demo` | `Demo@1234` |
+| Candidate | `seeker@jobconnect.demo` | `Demo@1234` |
+
+> Don't seed a database that real users will use — those accounts share a public password.
+
+## Configuration
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DATABASE_URL` | — (required) | Neon / PostgreSQL connection string |
+| `PORT` | `3000` | HTTP port (Render sets this for you) |
+| `SEED_DEMO` | `0` | `1` = fill an empty database with demo data on start |
+| `TRUST_PROXY` | `0` | `1` behind a proxy/PaaS so rate limiting uses the real client IP |
+| `COOKIE_SECURE` | `0` | Force the `Secure` cookie flag (automatic behind HTTPS proxies) |
+| `DB_POOL_MAX` | `8` | Max database connections |
 
 ## Project structure
 
 ```
 server.js            HTTP server, security headers, static files
 src/
+  db.js              Postgres pool, query helpers, schema (created automatically)
   routes.js          REST API (auth, jobs, profile & resume, applications, employer tools)
-  db.js              SQLite schema (users, companies, profiles, jobs, applications, saved_jobs, sessions)
-  auth.js            scrypt password hashing, server-side sessions, rate limiting
+  auth.js            scrypt password hashing, sessions stored in the database, rate limiting
   http.js            JSON/multipart parsing, cookies, static file serving
-  seed.js            Demo data (npm run seed)
+  seed.js            Optional demo data
+  check-db.js        `npm run check-db` — connection diagnostics
   constants.js       Categories, job types, statuses, upload limits
-public/
-  index.html         Landing page          jobs.html       Job board
-  login.html         Log in                register.html   Create account (candidate or employer)
-  dashboard.html     Candidate + employer dashboards
-  css/styles.css     The whole black & silver design system
-  js/                common.js (API, header, drawer, helpers) · jobview.js · home.js · jobs.js · auth.js · dashboard.js
-data/                Created at runtime: jobconnect.db + uploads/ (resumes)
+public/              The whole front end (HTML, css/styles.css, js/*)
 Dockerfile           Container image
 ```
 
-## Features in detail
-
-**Public:** landing page with live stats, category browser, latest jobs · job board with keyword, location, field, type and work-mode filters, pagination and a detail drawer.
-
-**Candidate dashboard:** overview with stats and profile-strength checklist · applications with live status and withdraw · saved jobs · profile editor · resume upload with drag-and-drop, replace, download and remove. A resume can also be uploaded straight from the apply form.
-
-**Employer dashboard:** overview with hiring pipeline chart · job management (create, edit, close / reopen, delete) · applicant table with filters by job and status · applicant drawer with cover note, skills and resume download · status updates (Applied → In review → Shortlisted → Interview → Hired / Not selected) · company profile.
-
 ## Resume uploads
 
-- Accepted: `.pdf`, `.doc`, `.docx`, up to **5 MB**. The limit and types live in `src/constants.js`.
-- Files are checked by extension **and** file signature (magic bytes), stored under a random name in `DATA_DIR/uploads` (not web-accessible), and served only through authenticated endpoints:
-  candidates can download their own; an employer can download only resumes of people who applied to **their** jobs.
-- Each application keeps a snapshot of the resume used at the time, so replacing your profile resume later doesn't change what an employer already received.
-
-## Configuration
-
-| Variable        | Default  | Purpose |
-|-----------------|----------|---------|
-| `PORT`          | `3000`   | HTTP port |
-| `DATA_DIR`      | `./data` | Database + uploaded resumes. **Use a persistent disk in production.** |
-| `SEED_DEMO`     | `1`      | Set `0` to skip demo data on an empty database |
-| `TRUST_PROXY`   | `0`      | Set `1` behind a proxy/PaaS so rate limiting uses the real client IP |
-| `COOKIE_SECURE` | `0`      | Force the `Secure` cookie flag (auto-enabled when the proxy sends `X-Forwarded-Proto: https`) |
+- Accepted: `.pdf`, `.doc`, `.docx`, up to **5 MB** (limit in `src/constants.js`).
+- Checked by extension **and** file signature, stored in the `resume_files` table, and served only through authenticated endpoints: a candidate can download their own; an employer only resumes of people who applied to **their** jobs.
+- Each application keeps a snapshot of the resume used when applying; replacing your profile resume later doesn't change what an employer already received. Unreferenced files are deleted automatically.
+- Neon's free plan has a storage cap (check neon.tech/pricing for the current figure). Typical resumes are a few hundred KB, so this goes a long way, but keep an eye on usage in the Neon dashboard.
 
 ## Deploying
 
-The app is a single process that needs **a persistent folder** for `DATA_DIR` (SQLite file + resumes). Always serve it over **HTTPS**.
+See the step-by-step guide given with this project (Render Free + Neon). In short, on any Node host:
 
-**Docker**
-```bash
-docker build -t jobconnect .
-docker run -d -p 3000:3000 -v jobconnect-data:/data -e SEED_DEMO=0 jobconnect
-```
+- Build command `npm install`, start command `npm start`, health check `/healthz`
+- Environment: `DATABASE_URL`, `NODE_VERSION=22`, `TRUST_PROXY=1`, `SEED_DEMO=0`
+- Serve over HTTPS (Render does this automatically)
 
-**Render / Railway / Fly.io** — create a web service from this folder (or its Docker image), attach a persistent disk/volume, set `DATA_DIR` to the mount path (e.g. `/data`), `TRUST_PROXY=1`, `SEED_DEMO=0`, and use the start command `npm start`. Health check path: `/healthz`.
-
-**VPS (Ubuntu + Nginx)**
-1. Install Node 22 and copy the project to `/srv/jobconnect`.
-2. Run it with systemd (or pm2): `PORT=3000 TRUST_PROXY=1 SEED_DEMO=0 DATA_DIR=/srv/jobconnect-data node --disable-warning=ExperimentalWarning server.js`
-3. Put Nginx in front with a Let's Encrypt certificate and proxy to `127.0.0.1:3000`, forwarding `Host`, `X-Forwarded-For` and `X-Forwarded-Proto`. Set `client_max_body_size 6m;` so resume uploads aren't blocked.
+**Docker:** `docker build -t jobconnect .` then `docker run -p 3000:3000 -e DATABASE_URL="..." jobconnect`
 
 ## Security notes
 
 - Passwords hashed with **scrypt** (per-user salt); sessions are random tokens stored hashed in the database, sent as `HttpOnly` + `SameSite=Lax` cookies.
-- All SQL is parameterised; all user content is HTML-escaped on render; a strict Content-Security-Policy is sent (scripts from `self` only).
+- All SQL is parameterised; user content is HTML-escaped on render; a strict Content-Security-Policy is sent.
 - State-changing API calls reject cross-origin requests; login and registration are rate limited.
-- Role checks happen on the server for every endpoint — employers can only see and change their own jobs and applicants.
+- Role checks run on the server for every endpoint — employers only see their own jobs and applicants.
+- Keep `DATABASE_URL` secret (never commit it). If it leaks, reset the password in Neon.
 
-## Known limitations / ideas for next steps
+## Known limitations / next steps
 
-- No email verification, password reset or email notifications yet (add an SMTP provider such as Postmark or SES).
-- SQLite suits a single server. To scale out, move to PostgreSQL and S3-compatible storage for resumes.
-- `node:sqlite` is marked experimental by Node.js; the warning is suppressed in the npm scripts. The API used here is stable in practice, but pin your Node version in production.
+- No email verification, password reset or email notifications yet (add an email provider such as Resend or Postmark).
+- Free tiers sleep: Render Free after ~15 minutes idle, Neon after ~5 minutes idle. The first visit after a quiet period is slower; no data is lost.
 - Add an admin role for moderation if you open registration to the public.
-
-## Customising the look
-
-All colours, fonts and spacing are CSS variables at the top of `public/css/styles.css` (`--silver-*`, `--metal`, `--font-display`, …). The linked-rings logo is generated in `public/js/common.js` (`ringsSvg`).

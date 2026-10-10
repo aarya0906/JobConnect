@@ -1,8 +1,6 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import crypto from 'node:crypto';
 import { pathToFileURL } from 'node:url';
-import { db, transaction, UPLOAD_DIR } from './db.js';
+import { get, tx, initSchema, pool } from './db.js';
 import { hashPassword } from './auth.js';
 
 export const DEMO_PASSWORD = 'Demo@1234';
@@ -120,29 +118,34 @@ export async function seedDemoData() {
   const jobIds = [];
   const seekerIds = [];
 
-  transaction(() => {
-    const insUser = db.prepare('INSERT INTO users (name, email, password_hash, salt, role, created_at) VALUES (?,?,?,?,?,?)');
-    COMPANIES.forEach((c, i) => {
-      const id = Number(insUser.run(c.name, c.email, pass.hash, pass.salt, 'employer', daysAgo(40 - i)).lastInsertRowid);
+  await tx(async (q) => {
+    const insUser = (name, email, role, created) =>
+      q.get('INSERT INTO users (name, email, password_hash, salt, role, created_at) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+        [name, email, pass.hash, pass.salt, role, created]);
+
+    for (const [i, c] of COMPANIES.entries()) {
+      const { id } = await insUser(c.name, c.email, 'employer', daysAgo(40 - i));
       employerIds.push(id);
-      db.prepare('INSERT INTO companies (user_id, name, industry, size, website, location, about) VALUES (?,?,?,?,?,?,?)')
-        .run(id, c.company, c.industry, c.size, c.website, c.location, c.about);
-    });
+      await q.run('INSERT INTO companies (user_id, name, industry, size, website, location, about) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [id, c.company, c.industry, c.size, c.website, c.location, c.about]);
+    }
 
-    JOBS.forEach(([ci, title, category, type, mode, location, currency, min, max, ago, description, requirements]) => {
-      const id = Number(db.prepare(`INSERT INTO jobs (employer_id, title, category, type, work_mode, location, currency, salary_min, salary_max, description, requirements, created_at, updated_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(employerIds[ci], title, category, type, mode, location, currency, min, max, description, requirements, daysAgo(ago, ago * 3), daysAgo(ago, ago * 3)).lastInsertRowid);
+    for (const [ci, title, category, type, mode, location, currency, min, max, ago, description, requirements] of JOBS) {
+      const { id } = await q.get(`INSERT INTO jobs (employer_id, title, category, type, work_mode, location, currency, salary_min, salary_max, description, requirements, created_at, updated_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12) RETURNING id`,
+        [employerIds[ci], title, category, type, mode, location, currency, min, max, description, requirements, daysAgo(ago, ago * 3)]);
       jobIds.push(id);
-    });
+    }
 
-    SEEKERS.forEach((s, i) => {
-      const id = Number(insUser.run(s.name, s.email, pass.hash, pass.salt, 'seeker', daysAgo(30 - i)).lastInsertRowid);
+    for (const [i, s] of SEEKERS.entries()) {
+      const { id } = await insUser(s.name, s.email, 'seeker', daysAgo(30 - i));
       seekerIds.push(id);
-      const file = `${crypto.randomUUID()}.pdf`;
-      fs.writeFileSync(path.join(UPLOAD_DIR, file), tinyPdf([s.name, s.headline, s.location, '', 'Skills: ' + s.skills, '', s.about]));
-      db.prepare('INSERT INTO profiles (user_id, headline, location, phone, skills, about, resume_file, resume_name, resume_size, resume_uploaded_at) VALUES (?,?,?,?,?,?,?,?,?,?)')
-        .run(id, s.headline, s.location, s.phone, s.skills, s.about, file, `${s.name.replace(' ', '_')}_Resume.pdf`, fs.statSync(path.join(UPLOAD_DIR, file)).size, daysAgo(10));
-    });
+      const pdf = tinyPdf([s.name, s.headline, s.location, '', 'Skills: ' + s.skills, '', s.about]);
+      const fileId = crypto.randomUUID();
+      await q.run('INSERT INTO resume_files (id, ext, size, data) VALUES ($1,$2,$3,$4)', [fileId, 'pdf', pdf.length, pdf]);
+      await q.run('INSERT INTO profiles (user_id, headline, location, phone, skills, about, resume_file, resume_name, resume_size, resume_uploaded_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+        [id, s.headline, s.location, s.phone, s.skills, s.about, fileId, `${s.name.replace(' ', '_')}_Resume.pdf`, pdf.length, daysAgo(10)]);
+    }
 
     // [seekerIndex, jobIndex, status, daysAgo, note]
     const apps = [
@@ -158,22 +161,24 @@ export async function seedDemoData() {
       [1, 1, 'applied', 4, '']
     ];
     for (const [si, ji, status, ago, note] of apps) {
-      const prof = db.prepare('SELECT resume_file, resume_name FROM profiles WHERE user_id = ?').get(seekerIds[si]);
-      db.prepare('INSERT INTO applications (job_id, seeker_id, cover_note, resume_file, resume_name, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)')
-        .run(jobIds[ji], seekerIds[si], note, prof.resume_file, prof.resume_name, status, daysAgo(ago, 2), daysAgo(ago));
+      const prof = await q.get('SELECT resume_file, resume_name FROM profiles WHERE user_id = $1', [seekerIds[si]]);
+      await q.run('INSERT INTO applications (job_id, seeker_id, cover_note, resume_file, resume_name, status, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+        [jobIds[ji], seekerIds[si], note, prof.resume_file, prof.resume_name, status, daysAgo(ago, 2), daysAgo(ago)]);
     }
-    db.prepare('INSERT INTO saved_jobs (user_id, job_id) VALUES (?,?)').run(seekerIds[0], jobIds[2]);
-    db.prepare('INSERT INTO saved_jobs (user_id, job_id) VALUES (?,?)').run(seekerIds[0], jobIds[11]);
+    await q.run('INSERT INTO saved_jobs (user_id, job_id) VALUES ($1,$2)', [seekerIds[0], jobIds[2]]);
+    await q.run('INSERT INTO saved_jobs (user_id, job_id) VALUES ($1,$2)', [seekerIds[0], jobIds[11]]);
   });
 }
 
-// Allow `npm run seed` to be used directly (only when the database is empty).
+// `npm run seed` — only seeds an empty database.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const { n } = db.prepare('SELECT COUNT(*) AS n FROM users').get();
+  await initSchema();
+  const { n } = await get('SELECT COUNT(*) AS n FROM users');
   if (n > 0) {
     console.log('Database already contains users — skipping seed.');
   } else {
     await seedDemoData();
     console.log(`Demo data created. Log in with employer@jobconnect.demo or seeker@jobconnect.demo (password: ${DEMO_PASSWORD}).`);
   }
+  await pool.end();
 }

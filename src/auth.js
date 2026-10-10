@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { promisify } from 'node:util';
-import { db } from './db.js';
+import { get, run } from './db.js';
 
 const scrypt = promisify(crypto.scrypt);
 export const SESSION_COOKIE = 'jc_session';
@@ -19,33 +19,33 @@ export async function verifyPassword(password, hash, salt) {
 
 const sha = (t) => crypto.createHash('sha256').update(t).digest('hex');
 
-export function createSession(userId) {
+export async function createSession(userId) {
   const token = crypto.randomBytes(32).toString('base64url');
   const expires = Date.now() + SESSION_DAYS * 86400000;
-  db.prepare('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?,?,?)').run(sha(token), userId, expires);
+  await run('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES ($1, $2, $3)', [sha(token), userId, expires]);
   return { token, maxAge: SESSION_DAYS * 86400 };
 }
 
-export function getSessionUser(token) {
+export async function getSessionUser(token) {
   if (!token) return null;
-  const row = db.prepare(`
-    SELECT u.id, u.name, u.email, u.role, s.expires_at
-    FROM sessions s JOIN users u ON u.id = s.user_id
-    WHERE s.token_hash = ?`).get(sha(token));
+  const row = await get(
+    `SELECT u.id, u.name, u.email, u.role, s.expires_at
+     FROM sessions s JOIN users u ON u.id = s.user_id
+     WHERE s.token_hash = $1`, [sha(token)]);
   if (!row) return null;
-  if (row.expires_at < Date.now()) {
-    destroySession(token);
+  if (Number(row.expires_at) < Date.now()) {
+    await destroySession(token);
     return null;
   }
   return { id: row.id, name: row.name, email: row.email, role: row.role };
 }
 
-export function destroySession(token) {
-  if (token) db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sha(token));
+export async function destroySession(token) {
+  if (token) await run('DELETE FROM sessions WHERE token_hash = $1', [sha(token)]);
 }
 
-export function purgeExpiredSessions() {
-  db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Date.now());
+export async function purgeExpiredSessions() {
+  await run('DELETE FROM sessions WHERE expires_at < $1', [Date.now()]);
 }
 
 /** Small in-memory limiter for login/register attempts. */
